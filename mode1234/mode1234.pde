@@ -9,9 +9,14 @@ import processing.video.*;
 // Step 1. Declare Movie object
 Movie movie; 
 WeatherGrabber wg;
+infoGrabber ifg;
 int lastSecond, weatherHttpSeconds, numDrops, rainlength, windspeed;
-Drop [] drops = new Drop[50];
+Drop [] drops = new Drop[75];
 int randomhigh;
+String mywish, myurl;
+PImage weburl;
+int starttime;
+int curtime;
 
 boolean sketchFullScreen() {
   return true;
@@ -20,7 +25,12 @@ boolean sketchFullScreen() {
 void setup() {
   size(displayWidth, displayHeight);
   //size(320,240);
-  randomhigh = displayHeight/16;
+  randomhigh = displayHeight/12;
+  myurl = "none";
+  lastSecond = -1;
+  starttime = -6000;
+  textFont( createFont("DFKai-SB Regular", 80) );
+  textSize(16);
   for(int i = 0; i < drops.length; i++)
   {
     drops[i] = new Drop();
@@ -30,42 +40,85 @@ void setup() {
   // Movie file should be in data folder
   movie = new Movie(this, "cat.mov"); 
   wg = new WeatherGrabber();//zips[counter]);
+  ifg = new infoGrabber();
   // Step 3. Start movie playing
   movie.loop();
 }
 
 // Step 4. Read new frames from movie
 void movieEvent(Movie movie) {
+  if(lastSecond != second())
+  {
+    float myAlpha = getAlpha(wg.getCode());
+    if( second() % weatherHttpSeconds == 0 )
+    {
+       wg.requestWeather(); 
+       numDrops = (int)map(myAlpha, 50, 200, 0, drops.length);
+       rainlength = (int)map(myAlpha, 50, 200, randomhigh >> 1, randomhigh );
+       windspeed = wg.getSpeed() / 6;
+       starttime = millis();
+       lastSecond = second();
+    }
+    else if( (millis() - starttime) / 1000 == ( weatherHttpSeconds >> 1 ) )
+    {
+       ifg.requestInfo();
+       myurl = ifg.getImg();
+       if(!myurl.equals("none"))
+       {
+          mywish = ifg.getWish();
+          weburl = loadImage(myurl);
+          weburl.resize(width,height);
+       }
+       //println(mywish);
+       //println(windspeed);
+       //println(map(wg.getSpeed(),0,50,1,2));
+       //println(wg.getCode());
+       if(myAlpha > 0 && abs(lastSecond - second()) > 1)
+       {
+         windspeed = -windspeed;
+       }
+       else
+       {
+         //movie.speed(map(wg.getSpeed(),0,50,1,2));
+       }
+       lastSecond = second();
+    }
+  }
   movie.read();
-  if( second() % weatherHttpSeconds == 0 && lastSecond != second() )
-  {
-     wg.requestWeather(); 
-     lastSecond = second();
-     numDrops = (int)map(getAlpha(3), 50, 200, 0, drops.length);
-     rainlength = (int)map(getAlpha(3), 50, 200, randomhigh >> 1, randomhigh );
-     windspeed = wg.getSpeed() / 6;
-  }
-  /*
-  else if( abs( lastSecond - second() ) == (weatherHttpSeconds >> 1) )
-  {
-     println(numDrops);
-     println(rainlength);
-     println(windspeed);
-     //println(wg.getCode());
-     lastSecond = second();
-  }
-  */
 }
 
 void draw() {
   // Step 5. Display movie.
-  image(movie,0,0);
-  fill(255, getAlpha(3));
-  noStroke();
-  for(int i = 0; i <numDrops; i++)
+  if(myurl.equals("none"))
   {
-    drops[i].display(rainlength);
-    drops[i].fall(windspeed);
+    image(movie,0,0);
+    fill(255, getAlpha(wg.getCode()));
+    noStroke();
+    for(int i = 0; i <numDrops; i++)
+    {
+      drops[i].display(rainlength);
+      drops[i].fall(windspeed);
+    }
+  }
+  else
+  {
+    if(movie.time() > 0)
+    {
+      //println(movie.time());
+      movie.stop();
+      starttime = millis();
+    }
+    else if( (millis() - starttime) / 1000 <= 30 )
+    {
+      image(weburl,0, 0);
+      fill(0);
+      text(mywish, 0, 200);
+    }
+    else
+    {
+      myurl = "none";
+      movie.loop(); 
+    }
   }
 }
 
@@ -101,7 +154,7 @@ void draw() {
         i = random(150,175);
       break;
       default:
-        i = 0;
+        i = random(125,150);
       break;
     }  
     return i;
