@@ -1,9 +1,9 @@
 /* OpenProcessing Tweak of *@*http://www.openprocessing.org/sketch/32916*@* */
 /* !do not delete the line above, required for linking your tweak if you re-upload */
-float x=4;
-float y=1;
-float f=2;
-float h=3;
+float xx=4;
+float yy=1;
+float ff=2;
+float hh=3;
 float xpos;
 float ypos;
 float fpos;
@@ -42,22 +42,22 @@ void draw() {
   fill(random(0,255),random(0,255),random(0,255));
   text(mywish[2], fpos,hpos);
   if (ypos<=yubound || ypos>=ylbound) {
-    y=y*-1;
+    yy=yy*-1;
   }
   if (xpos<=0 || xpos>=xrbound) {
-    x=x*-1;
+    xx=xx*-1;
   }
   if (hpos<=yubound || hpos>=ylbound) {
-    h=h*-1;
+    hh=hh*-1;
   }
   if (fpos<=0 || fpos>=xrbound) {
-    f=f*-1;
+    ff=ff*-1;
   }
 
-  ypos=ypos+y;
-  xpos=xpos+x;
-  fpos=fpos+f;
-  hpos=hpos+h;
+  ypos=ypos+yy;
+  xpos=xpos+xx;
+  fpos=fpos+ff;
+  hpos=hpos+hh;
  
 }
 

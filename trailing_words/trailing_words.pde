@@ -38,7 +38,7 @@ void setup()
   //noiseDetail(3,0.5);
   //hint(ENABLE_NATIVE_FONTS);
   FONTSIZE = (displayWidth >> 3)/mywish.length();
-  textFont( createFont("DFKai-SB Regular", FONTSIZE) );
+  textFont( createFont("DFKai-SB Regular", 50) );
   textSize(FONTSIZE);
   xpositions = new float[mywish.length()];
   c_offsets = new float[mywish.length()];
