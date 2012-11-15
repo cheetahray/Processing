@@ -1,5 +1,7 @@
 /* OpenProcessing Tweak of *@*http://www.openprocessing.org/sketch/32916*@* */
 /* !do not delete the line above, required for linking your tweak if you re-upload */
+import processing.video.*;
+
 float xx=4;
 float yy=1;
 float ff=2;
@@ -56,6 +58,16 @@ int pixWidth, pixHeight;
 
 Pix[][] pix = new Pix[num][numH];
 
+Movie movie; 
+WeatherGrabber wg;
+infoGrabber ifg;
+int weatherHttpSeconds, numDrops, rainlength, windspeed;
+Drop [] drops = new Drop[75];
+int randomhigh;
+String myurl;
+int starttime;
+int curtime;
+
 boolean sketchFullScreen() {
   return true;
 }
@@ -83,100 +95,84 @@ void setup() {
   mouseXX = (width >> 1) + (width >> 2);
   swingunit = 5;
   
-  mywish = "英國外交官羅伯特．庫伯注意到現代歐洲國家這樣的特質，將之定位為後現代國家。";
-  
-  weburl = loadImage("girl_with_pearl_earbuds.jpg");
-  if( weburl.width > (width >> 1) || weburl.height > (height >> 1) )
-    weburl.resize(width >> 1, height >> 1);
-  createBoids(weburl);
-  
-  pixWidth = weburl.width / num;
-  pixHeight = weburl.height / numH;
-  if(pixWidth == 0)
-    pixWidth = 1;
-  if(pixHeight == 0)
-    pixHeight = 1;
-  int imgWidth = pixWidth * num;
-  for (int i=0; i<num; i+=pixWidth){
-    for (int j=0; j<numH; j+=pixHeight){
-      pix[i][j] = new Pix(i + (width >> 1) + ( (width >> 2) - (num >> 2) ), j + (height >> 1), random(-1, 1), random(1, 2), i, j, random(0.1, 0.5), pixWidth, pixHeight);
-    }
+  randomhigh = displayHeight/12;
+  myurl = "none";
+  lastSecond = -1;
+  starttime = -6000;
+  textFont( createFont("DFKai-SB Regular", 80) );
+  textSize(16);
+  for(int i = 0; i < drops.length; i++)
+  {
+    drops[i] = new Drop();
   }
+  weatherHttpSeconds = 10;
+  // Step 2. Initialize Movie object
+  // Movie file should be in data folder
+  movie = new Movie(this, "cat.mov"); 
+  wg = new WeatherGrabber();//zips[counter]);
+  ifg = new infoGrabber();
+  // Step 3. Start movie playing
+  movie.loop();
+  
+  //mywish = "英國外交官羅伯特．庫伯注意到現代歐洲國家這樣的特質，將之定位為後現代國家。";
+  mywisharray = new String[2];
+    
 }
 
 void draw() {
-  if(!mywish.equals("none"))
+  if(myurl.equals("none"))
   {
-    mywisharray = new String[2];
-    mywisharray[0]=mywish.substring(0,mywish.length()/2);
-    mywisharray[1]=mywish.substring(mywish.length()/2);
-    
-    if(mywish.length()<5)
-    {
-      int nlen = mywish.length();
-      for(int ii=0 ; ii< (5-nlen) ; ii ++)
-        mywish += "~"; 
-    }
-    numObjects = mywish.length()/5;
-    angleObject = (TWO_PI/numObjects);
-    div4[0] = numObjects;
-    for(int ii=0; ii< 4; ii++)
-    {
-      angleobj[ii] = (angleObject / 5) * (ii+1);
-      div4[ii] = numObjects * (ii+1); 
-    }
-    
-    mywish3 = mywish.length() > 8 ? mywish.substring(0,8): mywish;
-    FONTSIZE = (width >> 3)/mywish3.length();
-    xpositions = new float[mywish3.length()];
-    c_offsets = new float[mywish3.length()];
-    theta_offsets = new float[mywish3.length()];
-    float mywish3length = textWidth(mywish3);
-    float letterpos = ( (width >> 2) - mywish3length ) / 2.0 + (width >> 1);
-    for(int i = 0; i < mywish3.length(); ++i) {
-      c_offsets[i] = random(1000.);
-      theta_offsets[i] = random(1000.);
-      xpositions[i] = letterpos;
-      float letterwidth = textWidth(mywish3.charAt(i));
-      letterpos += letterwidth;
-    }
-    c_time = millis()/1000.0;
-    theta_time = millis()/1000.0;
-    lastMillis = millis()/1000.0;
-    
-    mywish4 = mywish.length() > 12 ? mywish.substring(0,12): mywish;
-    
-    fill(0,0,0);
+    image(movie,0,0);
+    fill(255, getAlpha(wg.getCode()));
     noStroke();
-    rect(0,0,width >> 2, height >> 1);
-    
-    textSize(32);
-    
-    fill(random(0,255),random(0,255),random(0,255));
-    
-    int xposlen = (int)abs( xpos - (width >> 2) ) / 32;
-    int fposlen = (int)abs( fpos - (width >> 2) ) / 32;
-    text(mywisharray[0].substring(0, xposlen > mywisharray[0].length() ? mywisharray[0].length(): xposlen ),xpos,ypos);
-    fill(random(0,255),random(0,255),random(0,255));
-    text(mywisharray[1].substring(0, fposlen > mywisharray[1].length() ? mywisharray[1].length(): fposlen ), fpos,hpos);
-    if (ypos<=yubound || ypos>=ylbound) {
-      yy=yy*-1;
+    for(int i = 0; i <numDrops; i++)
+    {
+      drops[i].display(rainlength);
+      drops[i].fall(windspeed);
     }
-    if (xpos<=0 || xpos>=xrbound) {
-      xx=xx*-1;
+  }
+  else
+  {
+    if(movie.time() > 0)
+    {
+      //println(movie.time());
+      movie.stop();
+      starttime = millis();
     }
-    if (hpos<=yubound || hpos>=ylbound) {
-      hh=hh*-1;
-    }
-    if (fpos<=0 || fpos>=xrbound) {
-      ff=ff*-1;
-    }
+    else if( (millis() - starttime) / 1000 <= 30 )
+    {
   
-    ypos=ypos+yy;
-    xpos=xpos+xx;
-    fpos=fpos+ff;
-    hpos=hpos+hh;
-   
+      fill(0,0,0);
+      noStroke();
+      rect(0,0,width >> 2, height >> 1);
+      
+      textSize(32);
+      
+      fill(random(0,255),random(0,255),random(0,255));
+      
+      int xposlen = (int)abs( xpos - (width >> 2) ) / 32;
+      int fposlen = (int)abs( fpos - (width >> 2) ) / 32;
+      text(mywisharray[0].substring(0, xposlen > mywisharray[0].length() ? mywisharray[0].length(): xposlen ),xpos,ypos);
+      fill(random(0,255),random(0,255),random(0,255));
+      text(mywisharray[1].substring(0, fposlen > mywisharray[1].length() ? mywisharray[1].length(): fposlen ), fpos,hpos);
+      if (ypos<=yubound || ypos>=ylbound) {
+        yy=yy*-1;
+      }
+      if (xpos<=0 || xpos>=xrbound) {
+        xx=xx*-1;
+      }
+      if (hpos<=yubound || hpos>=ylbound) {
+        hh=hh*-1;
+      }
+      if (fpos<=0 || fpos>=xrbound) {
+        ff=ff*-1;
+      }
+    
+      ypos=ypos+yy;
+      xpos=xpos+xx;
+      fpos=fpos+ff;
+      hpos=hpos+hh;
+     
       fill(83,159,162, 125);
       rect(width >> 2 , 0, width >> 2, height >> 1);
       rotaterate = frameCount * 0.01;
@@ -245,89 +241,88 @@ void draw() {
         popMatrix();
       }
       
-    textSize(FONTSIZE);
-    
-    c_speed = random(0,0.5);//map(mouseX,0,width>>2,0.0,0.5);
-    theta_speed = random(0,0.25);//map(mouseY,0,height>>1,0.0,0.25);
-    float y_0 = 20.0 + FONTSIZE;
-    fill(0,0,0);
-    rect(width >> 1,0,width >> 2, height >> 1);
-    float curMillis = millis()/1000.0;
-    c_time += c_speed*(curMillis - lastMillis);
-    theta_time += theta_speed*(curMillis - lastMillis);
-    lastMillis = curMillis;
-    float h = (height >> 4);///8.0;
-    for(int i = 0; i < mywish3.length(); ++i) {
-      float c = max_c*myNoise(c_offsets[i] + c_time);
-      float theta = max_theta*myNoise(theta_offsets[i] + theta_time);
+      textSize(FONTSIZE);
+      
+      c_speed = random(0,0.5);//map(mouseX,0,width>>2,0.0,0.5);
+      theta_speed = random(0,0.25);//map(mouseY,0,height>>1,0.0,0.25);
+      float y_0 = 20.0 + FONTSIZE;
+      fill(0,0,0);
+      rect(width >> 1,0,width >> 2, height >> 1);
+      float curMillis = millis()/1000.0;
+      c_time += c_speed*(curMillis - lastMillis);
+      theta_time += theta_speed*(curMillis - lastMillis);
+      lastMillis = curMillis;
+      float h = (height >> 4);///8.0;
+      for(int i = 0; i < mywish3.length(); ++i) {
+        float c = max_c*myNoise(c_offsets[i] + c_time);
+        float theta = max_theta*myNoise(theta_offsets[i] + theta_time);
+        fill(255);
+        text(mywish3.charAt(i), xpositions[i], y_0);
+        fill(255,255,255,8);
+        float[] x = new float[4];
+        float[] y = new float[4];
+        x[0] = xpositions[i]; x[1] = x[0];
+        x[2] = (width>>1) + (width>>3) + c*(xpositions[i] - (width>>1) - (width >> 3) );//;/2.0);
+        x[3] = x[2];
+        y[0] = y_0; y[1] = y[0] + (height >> 4);///8.0;
+        y[3] = (height>>1) - 1.5*FONTSIZE;
+        y[2] = y[3] - (height >> 4);///8.0;
+        for(int j = 1; j <= num_letters; ++j) {
+          pushMatrix();
+          float t = (float)j/num_letters;
+          translate( bezierPoint(x[0],x[1],x[2],x[3],t), bezierPoint(y[0],y[1],y[2],y[3],t) );
+          rotate( theta*j );
+          text(mywish3.charAt(i),0,0);
+          popMatrix();
+        }
+      }
+      
       fill(255);
-      text(mywish3.charAt(i), xpositions[i], y_0);
-      fill(255,255,255,8);
-      float[] x = new float[4];
-      float[] y = new float[4];
-      x[0] = xpositions[i]; x[1] = x[0];
-      x[2] = (width>>1) + (width>>3) + c*(xpositions[i] - (width>>1) - (width >> 3) );//;/2.0);
-      x[3] = x[2];
-      y[0] = y_0; y[1] = y[0] + (height >> 4);///8.0;
-      y[3] = (height>>1) - 1.5*FONTSIZE;
-      y[2] = y[3] - (height >> 4);///8.0;
-      for(int j = 1; j <= num_letters; ++j) {
-        pushMatrix();
-        float t = (float)j/num_letters;
-        translate( bezierPoint(x[0],x[1],x[2],x[3],t), bezierPoint(y[0],y[1],y[2],y[3],t) );
-        rotate( theta*j );
-        text(mywish3.charAt(i),0,0);
+      rect( (width >> 1) + (width >> 2),0 ,width >> 2, height >> 1);
+      
+      for(int i= ( (width >> 1) + (width >> 2) + ( abs(swingunit) << 1 ) ); i<=width; i+= (width >> 4) )
+      { //repeating the whole width
+      
+        pushMatrix(); // so it doesn't accumulate on itself from the forloop; isolates each rectangle
+        float angle = atan2( (height >> 1), mouseXX-i ); //y,x <--tricking atan2
+        translate(i,0);
+        rotate(angle);
+        fill(0);
+        text(mywish4,0,0); //origin,  width & height
         popMatrix();
       }
-    }
     
-    fill(255);
-    rect( (width >> 1) + (width >> 2),0 ,width >> 2, height >> 1);
+      if ( mouseXX < ( (width >> 1) + (width >> 2)  ) || mouseXX > ( width  + ( abs(swingunit) << 4 ) ) ) {
+        swingunit *= -1;
+      }
+      mouseXX += swingunit;
     
-    for(int i= ( (width >> 1) + (width >> 2) + ( abs(swingunit) << 1 ) ); i<=width; i+= (width >> 4) )
-    { //repeating the whole width
-    
-      pushMatrix(); // so it doesn't accumulate on itself from the forloop; isolates each rectangle
-      float angle = atan2( (height >> 1), mouseXX-i ); //y,x <--tricking atan2
-      translate(i,0);
-      rotate(angle);
-      fill(0);
-      text(mywish4,0,0); //origin,  width & height
-      popMatrix();
-    }
-  
-    if ( mouseXX < ( (width >> 1) + (width >> 2)  ) || mouseXX > ( width  + ( abs(swingunit) << 4 ) ) ) {
-      swingunit *= -1;
-    }
-    mouseXX += swingunit;
-  }
-  
-  if(second()%10 == 1 && lastSecond!=second())
-  {
-    fill(0);
-    rect(0, height >> 1, width >> 1, height >> 1);
-    minBrightness = 50;
-    createBoids(weburl);
-    lastSecond = second();
-  }
-  else
-  {
-    loadPixels();
-    for (int i=0;i<boids.size();i++)
-    {
-      Boid b=(Boid)boids.get(i);
-      /*
-      if (mouseDownR)
-        b.mDownR();
-      if (mouseDownL)
-        b.mDown();
-      if (mouseDownR==false&&mouseDownL==false)
-      */
-        b.mUp();
-    }
-    fastBlur(g, 1);
-    updatePixels();
-  }
+      if(second()%10 == 1 && lastSecond!=second())
+      {
+        fill(0);
+        rect(0, height >> 1, width >> 1, height >> 1);
+        minBrightness = 50;
+        createBoids(weburl);
+        lastSecond = second();
+      }
+      else
+      {
+        loadPixels();
+        for (int i=0;i<boids.size();i++)
+        {
+          Boid b=(Boid)boids.get(i);
+          /*
+          if (mouseDownR)
+            b.mDownR();
+          if (mouseDownL)
+            b.mDown();
+          if (mouseDownR==false&&mouseDownL==false)
+          */
+            b.mUp();
+        }
+        fastBlur(g, 1);
+        updatePixels();
+      }
   
       fill(0);
       rect(width >> 1, height >> 1, width >> 1, height >> 1);
@@ -366,6 +361,13 @@ void draw() {
           }
         }
       }
+    }
+    else
+    {
+      myurl = "none";
+      movie.loop(); 
+    }
+  }
 }
 
 float myNoise(float x)
@@ -474,3 +476,139 @@ void createBoids(PImage img)
     }
   }
 }
+
+// Step 4. Read new frames from movie
+void movieEvent(Movie movie) {
+  if(lastSecond != second())
+  {
+    float myAlpha = getAlpha(wg.getCode());
+    if( second() % weatherHttpSeconds == 0 )
+    {
+       wg.requestWeather(); 
+       numDrops = (int)map(myAlpha, 50, 200, 0, drops.length);
+       rainlength = (int)map(myAlpha, 50, 200, randomhigh >> 1, randomhigh );
+       windspeed = wg.getSpeed() / 6;
+       starttime = millis();
+       lastSecond = second();
+    }
+    else if( (millis() - starttime) / 1000 == ( weatherHttpSeconds >> 1 ) )
+    {
+       ifg.requestInfo();
+       myurl = ifg.getImg();
+       if(!myurl.equals("none"))
+       {
+          mywish = ifg.getWish();
+          mywisharray[0]=mywish.substring(0,mywish.length()/2);
+          mywisharray[1]=mywish.substring(mywish.length()/2);
+          
+          if(mywish.length()<5)
+          {
+            int nlen = mywish.length();
+            for(int ii=0 ; ii< (5-nlen) ; ii ++)
+              mywish += "~"; 
+          }
+          numObjects = mywish.length()/5;
+          angleObject = (TWO_PI/numObjects);
+          div4[0] = numObjects;
+          for(int ii=0; ii< 4; ii++)
+          {
+            angleobj[ii] = (angleObject / 5) * (ii+1);
+            div4[ii] = numObjects * (ii+1); 
+          }
+          
+          mywish3 = mywish.length() > 8 ? mywish.substring(0,8): mywish;
+          FONTSIZE = (width >> 3)/mywish3.length();
+          xpositions = new float[mywish3.length()];
+          c_offsets = new float[mywish3.length()];
+          theta_offsets = new float[mywish3.length()];
+          float mywish3length = textWidth(mywish3);
+          float letterpos = ( (width >> 2) - mywish3length ) / 2.0 + (width >> 1);
+          for(int i = 0; i < mywish3.length(); ++i) {
+            c_offsets[i] = random(1000.);
+            theta_offsets[i] = random(1000.);
+            xpositions[i] = letterpos;
+            float letterwidth = textWidth(mywish3.charAt(i));
+            letterpos += letterwidth;
+          }
+          c_time = millis()/1000.0;
+          theta_time = millis()/1000.0;
+          lastMillis = millis()/1000.0;
+          
+          mywish4 = mywish.length() > 12 ? mywish.substring(0,12): mywish;
+          
+          weburl = loadImage(myurl);
+          //weburl.resize(width,height);
+          //weburl = loadImage("girl_with_pearl_earbuds.jpg");
+          if( weburl.width > (width >> 1) || weburl.height > (height >> 1) )
+            weburl.resize(width >> 1, height >> 1);
+          createBoids(weburl);
+          
+          pixWidth = weburl.width / num;
+          pixHeight = weburl.height / numH;
+          if(pixWidth == 0)
+            pixWidth = 1;
+          if(pixHeight == 0)
+            pixHeight = 1;
+          int imgWidth = pixWidth * num;
+          for (int i=0; i<num; i+=pixWidth){
+            for (int j=0; j<numH; j+=pixHeight){
+              pix[i][j] = new Pix(i + (width >> 1) + ( (width >> 2) - (num >> 2) ), j + (height >> 1), random(-1, 1), random(1, 2), i, j, random(0.1, 0.5), pixWidth, pixHeight);
+            }
+          }
+       }
+       //println(mywish);
+       //println(windspeed);
+       //println(map(wg.getSpeed(),0,50,1,2));
+       //println(wg.getCode());
+       if(myAlpha > 0 && abs(lastSecond - second()) > 1)
+       {
+         windspeed = -windspeed;
+       }
+       else
+       {
+         //movie.speed(map(wg.getSpeed(),0,50,1,2));
+       }
+       lastSecond = second();
+    }
+  }
+  movie.read();
+}
+
+  float getAlpha(int code)
+  {
+    float i = 0;
+    switch(code)
+    {
+      case 3:
+      case 37:
+      case 38:
+      case 39:
+        i = random(190,200);
+      break; 
+      case 4:
+        i = random(175,190);
+      break;
+      case 8:
+      case 9:
+        i = random(50,75);
+      break;
+      case 10:
+      case 23:
+        i = random(75,125);
+      break;
+      case 11:
+      case 12:
+        i = random(125,150);
+      break;
+      case 40:
+      case 45:
+      case 47:
+        i = random(150,175);
+      break;
+      default:
+        i = random(125,150);
+      break;
+    }  
+    return i;
+  }
+
